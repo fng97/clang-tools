@@ -43,9 +43,27 @@ jobs:
         shell: bash
         run: |
           extra_flags=()
-          if [ "${{ matrix.os }}" = "linux" ]; then
-            extra_flags+=(-DLLVM_BUILD_STATIC=ON)
-          fi
+          case "${{ matrix.os }}" in
+            linux)
+              extra_flags+=(
+                -DLLVM_BUILD_STATIC=ON
+                -DCMAKE_CXX_FLAGS="-s -flto"
+              )
+              ;;
+            macos)
+              extra_flags+=(
+                -DCMAKE_CXX_FLAGS="-static-libgcc -static-libstdc++ -flto -ffunction-sections -fdata-sections"
+                -DCMAKE_EXE_LINKER_FLAGS="-Wl,-dead_strip"
+                -DLLVM_ENABLE_ZSTD=OFF
+                -DLLVM_ENABLE_ZLIB=OFF
+              )
+              ;;
+            windows)
+              extra_flags+=(
+                -DLLVM_USE_CRT_MINSIZEREL=MT
+              )
+              ;;
+          esac
           cmake -S llvm \
                 -B build \
                 -DCMAKE_BUILD_TYPE=MinSizeRel \
@@ -85,32 +103,39 @@ jobs:
           name: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}
           path: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}.tar.gz
 
-  # release:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   permissions:
-  #     contents: write
-  #
-  #   steps:
-  #     - name: Download all artifacts
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         path: artifacts
-  #
-  #     - name: Collect archives and compute hashes
-  #       run: |
-  #         mkdir release
-  #         find artifacts -name '*.tar.gz' -exec cp {} release/ \;
-  #         cd release
-  #         sha256sum *.tar.gz | tee ../sha256sums.txt
-  #
-  #     - name: Create GitHub Release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         tag_name: v20.1.0
-  #         name: clang-format 20.1.0
-  #         body: |
-  #           Static clang-format binaries built from LLVM 20.1.0.
-  #
-  #           See the job summary for SHA256 hashes and Zig-ready URLs.
-  #         files: release/*.tar.gz
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect archives and compute hashes
+        run: |
+          mkdir release
+          find artifacts -name '*.tar.gz' -exec cp {} release/ \;
+          cd release
+          sha256sum *.tar.gz | tee sha256sums.txt
+
+      - name: Write job summary
+        run: |
+          echo '## SHA256 Hashes' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat release/sha256sums.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v20.1.0
+          name: clang-format 20.1.0
+          body: |
+            Static clang-format binaries built from LLVM 20.1.0.
+          files: |
+            release/*.tar.gz
+            release/sha256sums.txt
