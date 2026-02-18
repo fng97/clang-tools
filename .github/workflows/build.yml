@@ -46,14 +46,14 @@ jobs:
                 -B build \
                 -DCMAKE_BUILD_TYPE=MinSizeRel \
                 -DLLVM_ENABLE_PROJECTS="clang" \
-                -DBUILD_SHARED_LIBS=OFF
+                -DBUILD_SHARED_LIBS=OFF \
+                -DLLVM_BUILD_STATIC=ON
 
       - name: Build clang-format
         shell: bash
         run: cmake --build build --target clang-format --config MinSizeRel
 
       - name: Smoke test
-        if: "!(matrix.os == 'windows' && matrix.arch == 'aarch64')"
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows" ]; then
