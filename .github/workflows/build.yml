@@ -37,17 +37,21 @@ jobs:
         with:
           repository: llvm/llvm-project
           ref: llvmorg-20.1.0
-          depth: 1
+          fetch-depth: 1
 
       - name: Configure
         shell: bash
         run: |
+          extra_flags=()
+          if [ "${{ matrix.os }}" = "linux" ]; then
+            extra_flags+=(-DLLVM_BUILD_STATIC=ON)
+          fi
           cmake -S llvm \
                 -B build \
                 -DCMAKE_BUILD_TYPE=MinSizeRel \
                 -DLLVM_ENABLE_PROJECTS="clang" \
                 -DBUILD_SHARED_LIBS=OFF \
-                -DLLVM_BUILD_STATIC=ON
+                "${extra_flags[@]}"
 
       - name: Build clang-format
         shell: bash
