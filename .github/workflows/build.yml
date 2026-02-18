@@ -1,0 +1,126 @@
+name: Build clang-format
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            os: linux
+            llvm_target: X86
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            os: linux
+            llvm_target: AArch64
+          - runner: macos-15
+            arch: aarch64
+            os: macos
+            llvm_target: AArch64
+          - runner: windows-2025
+            arch: x86_64
+            os: windows
+            llvm_target: X86
+          - runner: windows-11-arm
+            arch: aarch64
+            os: windows
+            llvm_target: AArch64
+
+    name: ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: llvmorg-20.1.0
+          fetch-depth: 1
+
+      - name: Configure
+        shell: bash
+        run: |
+          extra_flags=()
+          case "${{ matrix.os }}" in
+            linux)
+              extra_flags+=(-DLLVM_BUILD_STATIC=ON)
+              ;;
+            macos)
+              extra_flags+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0)
+              ;;
+            windows)
+              extra_flags+=(-DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded)
+              ;;
+          esac
+          cmake -S llvm \
+                -B build \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DLLVM_ENABLE_PROJECTS="clang" \
+                -DLLVM_TARGETS_TO_BUILD="${{ matrix.llvm_target }}" \
+                -DBUILD_SHARED_LIBS=OFF \
+                -DLLVM_ENABLE_ZSTD=OFF \
+                -DLLVM_ENABLE_ZLIB=OFF \
+                -DLLVM_ENABLE_TERMINFO=OFF \
+                "${extra_flags[@]}"
+
+      - name: Build clang-format
+        shell: bash
+        run: cmake --build build --target clang-format --config Release --parallel 2
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            build/Release/bin/clang-format.exe --version
+          else
+            build/bin/clang-format --version
+          fi
+
+      - name: Package
+        shell: bash
+        run: |
+          dir="clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}/bin"
+          mkdir -p "$dir"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            cp build/Release/bin/clang-format.exe "$dir/"
+          else
+            cp build/bin/clang-format "$dir/"
+          fi
+          7z a "clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}.zip" \
+            "clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}
+          path: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}.zip
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect archives
+        run: |
+          mkdir release
+          find artifacts -name '*.zip' -exec cp {} release/ \;
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v20.1.0
+          name: clang-format 20.1.0
+          body: |
+            Static clang-format binaries built from LLVM 20.1.0.
+          files: release/*.zip
