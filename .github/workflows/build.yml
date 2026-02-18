@@ -1,0 +1,112 @@
+name: Build clang-format
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+            os: linux
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            os: linux
+          - runner: macos-15-intel
+            arch: x86_64
+            os: macos
+          - runner: macos-15
+            arch: aarch64
+            os: macos
+          - runner: windows-2025
+            arch: x86_64
+            os: windows
+          - runner: windows-11-arm
+            arch: aarch64
+            os: windows
+
+    name: ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@v4
+        with:
+          repository: llvm/llvm-project
+          ref: llvmorg-20.1.0
+          depth: 1
+
+      - name: Configure
+        shell: bash
+        run: |
+          cmake -S llvm \
+                -B build \
+                -DCMAKE_BUILD_TYPE=MinSizeRel \
+                -DLLVM_ENABLE_PROJECTS="clang" \
+                -DBUILD_SHARED_LIBS=OFF
+
+      - name: Build clang-format
+        shell: bash
+        run: cmake --build build --target clang-format --config MinSizeRel
+
+      - name: Smoke test
+        if: "!(matrix.os == 'windows' && matrix.arch == 'aarch64')"
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            build/MinSizeRel/bin/clang-format.exe --version
+          else
+            build/bin/clang-format --version
+          fi
+
+      - name: Package
+        shell: bash
+        run: |
+          dir="clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}/bin"
+          mkdir -p "$dir"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            cp build/MinSizeRel/bin/clang-format.exe "$dir/"
+          else
+            cp build/bin/clang-format "$dir/"
+          fi
+          tar czf "clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}.tar.gz" \
+            "clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}
+          path: clang-format-20.1.0-${{ matrix.arch }}-${{ matrix.os }}.tar.gz
+
+  # release:
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   permissions:
+  #     contents: write
+  #
+  #   steps:
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: artifacts
+  #
+  #     - name: Collect archives and compute hashes
+  #       run: |
+  #         mkdir release
+  #         find artifacts -name '*.tar.gz' -exec cp {} release/ \;
+  #         cd release
+  #         sha256sum *.tar.gz | tee ../sha256sums.txt
+  #
+  #     - name: Create GitHub Release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         tag_name: v20.1.0
+  #         name: clang-format 20.1.0
+  #         body: |
+  #           Static clang-format binaries built from LLVM 20.1.0.
+  #
+  #           See the job summary for SHA256 hashes and Zig-ready URLs.
+  #         files: release/*.tar.gz
