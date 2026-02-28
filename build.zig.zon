@@ -1,0 +1,38 @@
+.{
+    .name = .clang_tools,
+    .version = "20.1.0",
+    .dependencies = .{
+        .clang_format_x86_64_linux = .{
+            .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-x86_64-linux.zip",
+            .hash = "N-V-__8AAEB4YwCq5aUpMx9dA7_kSFOSqcmhdaTG4cvSTSBn",
+            .lazy = true,
+        },
+        .clang_format_aarch64_linux = .{
+            .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-aarch64-linux.zip",
+            .hash = "N-V-__8AAAAjXgAJz-txrzL9FEI_Gb4J_4wNdr76vmiEWCEi",
+            .lazy = true,
+        },
+        .clang_format_aarch64_macos = .{
+            .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-aarch64-macos.zip",
+            .hash = "N-V-__8AAHBzOADDfz8qbbQYeiXvonhr3VgbWeYG9h1-0FP3",
+            .lazy = true,
+        },
+        .clang_format_x86_64_windows = .{
+            .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-x86_64-windows.zip",
+            .hash = "N-V-__8AAACYNgA56MxDIzt-2B5GnIwhVcY50W3KW0WyML4_",
+            .lazy = true,
+        },
+        .clang_format_aarch64_windows = .{
+            .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-aarch64-windows.zip",
+            .hash = "N-V-__8AAAD8NABKRgJrkowpc-GA0n-u0p5PF-3oruMf9PTi",
+            .lazy = true,
+        },
+    },
+    .minimum_zig_version = "0.15.2",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+    },
+    .fingerprint = 0x780263660f11fdb0,
+}
