@@ -19,12 +19,12 @@
         },
         .clang_format_x86_64_windows = .{
             .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-x86_64-windows.zip",
-            .hash = "N-V-__8AAACYNgAJfNZ2pnn9pEDz7NV1vGarHZh4xyHwY-0I",
+            .hash = "N-V-__8AAACYNgCCMfo9qCXKh92dnmQf9GVrfiPStvfSItOG",
             .lazy = true,
         },
         .clang_format_aarch64_windows = .{
             .url = "https://github.com/fng97/clang-tools/releases/download/v20.1.0/clang-format-20.1.0-aarch64-windows.zip",
-            .hash = "N-V-__8AAAD8NABr0gtsauhE6lJYFO8KfxzZCC_e94qc6WAf",
+            .hash = "N-V-__8AAAD8NABeGTnElEj6W1aBCUHI_djjowj_j8dFvPi-",
             .lazy = true,
         },
     },
